@@ -130,6 +130,38 @@ def drop_columns(data, columns_to_drop):
     cleaned_data = data.drop(columns=columns_to_drop, errors='ignore')
     return cleaned_data
 
+@st.cache(allow_output_mutation=True)
+def replace_nan(data, replace_option):
+    # Cleaning logic
+    if replace_option == "0":
+        cleaned_data = data.fillna(0)
+    elif replace_option == "Moyenne":
+        cleaned_data = data.fillna(data.mean())
+    elif replace_option == "Médiane":
+        cleaned_data = data.fillna(data.median())
+    else:
+        cleaned_data = data.copy()
+    return cleaned_data
+
+@st.cache(allow_output_mutation=True)
+def encode_categorical(data, encoding_option):
+    # Cleaning logic
+    if encoding_option == "One-Hot":
+        cleaned_data = pd.get_dummies(data, columns=data.select_dtypes(include=['object']).columns, drop_first=True)
+    elif encoding_option == "Ordinal":
+        cleaned_data = data.copy()  # Placeholder for ordinal encoding logic
+    else:
+        cleaned_data = data.copy()
+    return cleaned_data
+
+@st.cache(allow_output_mutation=True)
+def normalize_data(data):
+    # Cleaning logic
+    numeric_columns = data.select_dtypes(include=['number']).columns
+    if not numeric_columns.empty:
+        data[numeric_columns] = (data[numeric_columns] - data[numeric_columns].min()) / (data[numeric_columns].max() - data[numeric_columns].min())
+    return data
+
 # Main cleaning function
 def clean_data():
     # Affichage du nombre de valeurs manquantes
@@ -160,11 +192,41 @@ def clean_data():
             st.write("Data after dropping columns:")
             st.write(st.session_state.data)
 
-        # Additional cleaning steps...
-        # Add more buttons and corresponding functions for additional cleaning steps
+        # Step 3: Replace NaN
+        st.subheader("Remplacer les valeurs manquantes:")
+        replace_option = st.selectbox("Choisissez une option de remplacement :", ["0", "Moyenne", "Médiane"])
+        if st.button("Replace NaN"):
+            original_data = replace_nan(original_data, replace_option)
+            st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
+            st.success("Les valeurs manquantes ont été remplacées avec succès.")
+            st.write("Data after replacing NaN:")
+            st.write(st.session_state.data)
+
+        # Step 4: Encode Categorical
+        categorical_cols = original_data.select_dtypes(include=['object']).columns.tolist()
+        if categorical_cols:
+            st.subheader("Encodage des variables catégorielles:")
+            encoding_option = st.selectbox("Choisissez une option d'encodage :", ["One-Hot", "Ordinal"])
+            if st.button("Encode Categorical"):
+                original_data = encode_categorical(original_data, encoding_option)
+                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
+                st.success("Encodage appliqué avec succès.")
+                st.write("Data after encoding categorical variables:")
+                st.write(original_data)
+        else:
+            st.warning("Aucune variable catégorielle à encoder.")
+
+        # Step 5: Normalize Data
+        if st.button("Normalize Data"):
+            original_data = normalize_data(original_data)
+            st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
+            st.success("Les données ont été normalisées avec succès.")
+            st.write("Data after normalization:")
+            st.write(original_data)
 
     else:
         st.warning("Veuillez importer des données d'abord.")
+
 
 
 # Fonction pour afficher les onglets
