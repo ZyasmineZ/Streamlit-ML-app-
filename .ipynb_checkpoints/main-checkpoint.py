@@ -117,6 +117,20 @@ def split_tab():
     else:
         st.warning("Veuillez importer des données d'abord.")
 
+# Mock cleaning steps
+@st.cache(allow_output_mutation=True)
+def remove_nan(data):
+    # Cleaning logic
+    cleaned_data = data.fillna(0)  # Replace NaN with 0 for demonstration
+    return cleaned_data
+
+@st.cache(allow_output_mutation=True)
+def drop_columns(data, columns_to_drop):
+    # Cleaning logic
+    cleaned_data = data.drop(columns=columns_to_drop, errors='ignore')
+    return cleaned_data
+
+# Main cleaning function
 def clean_data():
     # Affichage du nombre de valeurs manquantes
     if st.session_state.data is not None:
@@ -128,85 +142,30 @@ def clean_data():
         missing_values = st.session_state.data.isnull().sum()
         st.write(missing_values)
 
-        # Sélection des colonnes à supprimer
-        st.subheader("Supprimer des colonnes:")
-        selected_columns_to_drop = st.multiselect("Sélectionnez les colonnes à supprimer", st.session_state.data.columns)
-        if st.button("Supprimer les colonnes sélectionnées"):
-            if selected_columns_to_drop:
-                original_data = original_data.drop(columns=selected_columns_to_drop)
-                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                # Afficher l'aperçu des données après les remplacements, l'encodage et la suppression des colonnes
-                st.write("Aperçu des données après la suppression des colonnes:")
-                st.write(st.session_state.data.head())
-            else:
-                st.warning("Veuillez sélectionner au moins une colonne.")
-
-        # Bouton pour remplacer NaN par 0
-        if st.button("Remplacer NaN par 0"):
-            original_data = original_data.fillna(0)
+        # Step 1: Remove NaN
+        if st.button("Remove NaN"):
+            original_data = remove_nan(original_data)
             st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
             st.success("Les NaN ont été remplacés par 0 avec succès.")
+            st.write("Data after removing NaN:")
+            st.write(st.session_state.data)
 
-        # Bouton pour remplacer les valeurs manquantes
-        st.subheader("Remplacer les valeurs manquantes:")
-        replace_option = st.selectbox("Choisissez une option de remplacement :", ["0", "Moyenne", "Médiane"])
-        if st.button("Appliquer le remplacement"):
-            if replace_option == "0":
-                original_data = original_data.fillna(0)
-                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                st.success("Les valeurs manquantes ont été remplacées par 0 avec succès.")
-            elif replace_option == "Moyenne":
-                original_data = original_data.fillna(original_data.mean())
-                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                st.success("Les valeurs manquantes ont été remplacées par la moyenne avec succès.")
-            elif replace_option == "Médiane":
-                original_data = original_data.fillna(original_data.median())
-                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                st.success("Les valeurs manquantes ont été remplacées par la médiane avec succès.")
-            else:
-                st.warning("Veuillez sélectionner une option de remplacement valide.")
+        # Step 2: Drop Columns
+        st.subheader("Supprimer des colonnes:")
+        selected_columns_to_drop = st.multiselect("Sélectionnez les colonnes à supprimer", st.session_state.data.columns)
+        if st.button("Drop Columns"):
+            original_data = drop_columns(original_data, selected_columns_to_drop)
+            st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
+            st.success("Les colonnes sélectionnées ont été supprimées avec succès.")
+            st.write("Data after dropping columns:")
+            st.write(st.session_state.data)
 
-
-        # Encodage des variables catégorielles
-        categorical_cols = original_data.select_dtypes(include=['object']).columns.tolist()
-        if categorical_cols:
-            st.subheader("Encodage des variables catégorielles:")
-            encoding_option = st.selectbox("Choisissez une option d'encodage :", ["One-Hot", "Ordinal"])
-            if st.button("Appliquer l'encodage"):
-                if encoding_option == "One-Hot":
-                    original_data = pd.get_dummies(original_data, columns=categorical_cols, drop_first=True)
-                    st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                    st.success("Encodage One-Hot appliqué avec succès.")
-                    # Affichage de l'aperçu des données après l'encodage
-                    st.write("Aperçu des données après l'encodage:")
-                    st.write(original_data.head())
-                elif encoding_option == "Ordinal":
-                    # Implémentez ici l'encodage ordinal si nécessaire
-                    st.warning("L'encodage ordinal n'est pas encore implémenté.")
-                else:
-                    st.warning("Veuillez sélectionner une option d'encodage valide.")
-        else:
-            st.warning("Aucune variable catégorielle à encoder.")
-
-
-        # Bouton pour normaliser les données
-        if st.button("Normaliser les données"):
-            # Sélectionner uniquement les colonnes numériques
-            numeric_columns = original_data.select_dtypes(include=['number']).columns
-
-            # Vérifier s'il y a des colonnes numériques pour éviter l'erreur
-            if not numeric_columns.empty:
-                original_data[numeric_columns] = (original_data[numeric_columns] - original_data[numeric_columns].min()) / (original_data[numeric_columns].max() - original_data[numeric_columns].min())
-                st.session_state.data = original_data.copy()  # Mettez à jour la session_data avec les modifications
-                st.success("Les données ont été normalisées avec succès.")
-                # Affichage de l'aperçu des données après la normalisation
-                st.write("Aperçu des données après la normalisation:")
-                st.write(original_data.head())
-            else:
-                st.warning("Aucune colonne numérique pour normaliser.")
+        # Additional cleaning steps...
+        # Add more buttons and corresponding functions for additional cleaning steps
 
     else:
         st.warning("Veuillez importer des données d'abord.")
+
 
 # Fonction pour afficher les onglets
 def display_tabs():
